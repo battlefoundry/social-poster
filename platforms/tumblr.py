@@ -1,5 +1,4 @@
 """Post a photo to Tumblr using OAuth1 credentials (pytumblr)."""
-import base64
 import pytumblr
 
 
@@ -15,6 +14,6 @@ def post(consumer_key: str, consumer_secret: str, oauth_token: str,
         state="published",
         caption=caption,
         tags=hashtags,
-        data64=base64.b64encode(image_bytes).decode("utf-8"),
+        data=image_bytes,
     )
     print("[Tumblr] Posted.")
