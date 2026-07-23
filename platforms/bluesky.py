@@ -1,4 +1,5 @@
 """Post text + an image to Bluesky using an app password."""
+import re
 from atproto import Client, client_utils
 
 
@@ -7,15 +8,19 @@ def post(handle: str, app_password: str, text: str, image_bytes: bytes, image_al
     client.login(handle, app_password)
 
     tb = client_utils.TextBuilder()
-    # Auto-link any http(s) URLs and #hashtags in the caption.
-    for token in text.split(" "):
-        stripped = token.rstrip("\n")
-        if stripped.startswith("http://") or stripped.startswith("https://"):
-            tb.link(stripped + " ", stripped)
-        elif stripped.startswith("#") and len(stripped) > 1:
-            tb.tag(stripped + " ", stripped[1:])
+    tokens = re.split(r'(\s+)', text)
+
+    for token in tokens:
+        if token == "":
+            continue
+        if token.isspace():
+            tb.text(token)
+        elif token.startswith("http://") or token.startswith("https://"):
+            tb.link(token, token)
+        elif token.startswith("#") and len(token) > 1:
+            tb.tag(token, token[1:])
         else:
-            tb.text(token + " ")
+            tb.text(token)
 
     client.send_image(
         text=tb,
