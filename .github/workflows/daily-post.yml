@@ -2,7 +2,10 @@ name: Daily Social Post
 
 on:
   schedule:
-    - cron: "0 15 * * *"
+    - cron: "0 8 * * *"    # UK/Europe morning
+    - cron: "0 12 * * *"   # UK/Europe lunch, US early morning
+    - cron: "0 15 * * *"   # US late morning peak, UK/Europe afternoon
+    - cron: "0 19 * * *"   # UK evening peak, US afternoon
   workflow_dispatch: {}
 
 jobs:
