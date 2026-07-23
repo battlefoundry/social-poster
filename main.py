@@ -18,9 +18,9 @@ Fantasy: https://cults3d.com/@BattleFoundry
 Scifi: https://cults3d.com/@BATTLEFOUNDRYSCIFI
 Resin Statue: https://cults3d.com/@BlacksiteSyndicate
 
-#miniature #dnd #dungeonanddragon #tabletopwargame #ttrpg"""
+#dnd #ttrpg #tabletopwargame #3dprinting #stl #freeminiatures"""
 
-HASHTAGS = ["miniature", "dnd", "dungeonanddragon", "tabletopwargame", "ttrpg"]
+HASHTAGS = ["dnd", "ttrpg", "tabletopwargame", "3dprinting", "stl", "freeminiatures"]
 IMAGE_ALT = "Free tabletop miniature from BattleFoundry / Blacksite Syndicate"
 PINTEREST_LINK = "https://cults3d.com/@BattleFoundry"
 PINTEREST_TITLE = "Free Tabletop Miniatures"
