@@ -18,7 +18,7 @@ def post(consumer_key: str, consumer_secret: str, oauth_token: str,
         tmp_path = tmp.name
 
     try:
-        client.create_photo(
+        response = client.create_photo(
             blog_name,
             state="published",
             caption=caption,
@@ -27,5 +27,11 @@ def post(consumer_key: str, consumer_secret: str, oauth_token: str,
         )
     finally:
         os.remove(tmp_path)
+
+    print(f"[Tumblr] API response: {response}")
+    if isinstance(response, dict) and response.get("meta", {}).get("status", 200) >= 300:
+        raise RuntimeError(f"Tumblr API returned an error: {response}")
+    if isinstance(response, dict) and "errors" in response:
+        raise RuntimeError(f"Tumblr API returned an error: {response}")
 
     print("[Tumblr] Posted.")
