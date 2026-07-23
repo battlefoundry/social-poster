@@ -16,7 +16,7 @@ CAPTION = """FREE Miniatures at
 
 Fantasy: https://cults3d.com/@BattleFoundry
 Scifi: https://cults3d.com/@BATTLEFOUNDRYSCIFI
-Resin Statue: https://cults3d.com/@BlacksiteSyndicate
+Grimdark: https://cults3d.com/@DREADWORKS
 
 #dnd #ttrpg #tabletopwargame #3dprinting #stl #freeminiatures"""
 
