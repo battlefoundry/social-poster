@@ -1,7 +1,9 @@
 """
 Generates one new blog post a day: picks a random image from the Google
-Drive folder, writes a blog-style writeup with Gemini, saves everything as
-a static HTML page under docs/, and updates the blog's homepage listing.
+Drive folder, writes content with Gemini (rotating between an ongoing saga,
+standalone tutorials, and standalone lore), saves everything as a static
+HTML page under docs/, and updates the blog's homepage listing + SEO files
+(sitemap.xml, robots.txt, meta tags).
 
 GitHub Pages serves the docs/ folder directly -- see README for one-time
 setup (Settings -> Pages -> Deploy from branch -> main -> /docs).
@@ -13,6 +15,7 @@ import datetime
 import html
 import json
 import os
+import random
 import re
 import sys
 import traceback
@@ -25,6 +28,9 @@ POSTS_DIR = os.path.join(DOCS_DIR, "posts")
 IMAGES_DIR = os.path.join(DOCS_DIR, "assets", "images")
 DATA_FILE = os.path.join(DOCS_DIR, "posts_data.json")
 
+# NOTE: update this if the repo or GitHub Pages URL ever changes.
+SITE_URL = "https://battlefoundry.github.io/social-poster"
+
 STORE_LINKS = [
     ("Fantasy", "https://cults3d.com/@BattleFoundry"),
     ("Scifi", "https://cults3d.com/@BATTLEFOUNDRYSCIFI"),
@@ -33,6 +39,10 @@ STORE_LINKS = [
 ]
 
 SITE_TITLE = "BattleFoundry Blog"
+SITE_TAGLINE = "Free D&D and tabletop wargaming miniature STLs"
+
+POST_TYPES = ["saga", "tutorial", "lore"]
+TYPE_LABELS = {"saga": "Chronicle", "tutorial": "Workshop", "lore": "Lore"}
 
 
 def env(name: str, required: bool = True) -> str:
@@ -60,12 +70,30 @@ def save_posts(posts: list):
         json.dump(posts, f, indent=2)
 
 
+def meta_description(text: str, limit: int = 155) -> str:
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return text
+    return text[:limit].rsplit(" ", 1)[0] + "…"
+
+
 POST_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{title} - {site_title}</title>
+<meta name="description" content="{meta_desc}">
+<link rel="canonical" href="{canonical_url}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="{title}">
+<meta property="og:description" content="{meta_desc}">
+<meta property="og:image" content="{image_url}">
+<meta property="og:url" content="{canonical_url}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{meta_desc}">
+<meta name="twitter:image" content="{image_url}">
 <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
@@ -73,9 +101,10 @@ POST_TEMPLATE = """<!DOCTYPE html>
   <a href="../index.html" class="site-title">{site_title}</a>
 </header>
 <main class="post">
+  <span class="post-type">{type_label}</span>
   <h1>{title}</h1>
   <p class="post-date">{date}</p>
-  <img class="post-image" src="../assets/images/{image_file}" alt="{title}">
+  <img class="post-image" src="../assets/images/{image_file}" alt="{image_alt}">
   <div class="post-body">
 {body_html}
   </div>
@@ -85,7 +114,7 @@ POST_TEMPLATE = """<!DOCTYPE html>
 {links_html}
     </ul>
   </div>
-  <a class="back-link" href="../index.html">&larr; Back to all posts</a>
+  <a class="back-link" href="../index.html">&larr; BACK TO ALL POSTS</a>
 </main>
 </body>
 </html>
@@ -96,13 +125,20 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{site_title}</title>
+<title>{site_title} — {tagline}</title>
+<meta name="description" content="{meta_desc}">
+<link rel="canonical" href="{site_url}/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{site_title}">
+<meta property="og:description" content="{meta_desc}">
+<meta property="og:url" content="{site_url}/">
+<meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 <header class="site-header">
   <span class="site-title">{site_title}</span>
-  <p class="site-subtitle">Free tabletop miniatures &amp; resin statues</p>
+  <p class="site-subtitle">{tagline}</p>
 </header>
 <main class="post-list">
 {cards_html}
@@ -112,8 +148,9 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 """
 
 CARD_TEMPLATE = """  <a class="post-card" href="posts/{slug}.html">
-    <img src="assets/images/{image_file}" alt="{title}">
+    <img src="assets/images/{image_file}" alt="{image_alt}">
     <div class="post-card-body">
+      <span class="post-type">{type_label}</span>
       <h2>{title}</h2>
       <p class="post-date">{date}</p>
       <p class="post-excerpt">{excerpt}</p>
@@ -121,10 +158,39 @@ CARD_TEMPLATE = """  <a class="post-card" href="posts/{slug}.html">
   </a>
 """
 
+SITEMAP_URL_TMPL = """  <url>
+    <loc>{loc}</loc>
+    <lastmod>{lastmod}</lastmod>
+  </url>
+"""
+
 
 def render_body_html(body: str) -> str:
     paragraphs = [p.strip() for p in body.split("\n") if p.strip()]
     return "\n".join(f"    <p>{html.escape(p)}</p>" for p in paragraphs)
+
+
+def write_seo_files(posts: list):
+    """robots.txt (static) and sitemap.xml (rebuilt from current posts)."""
+    robots_path = os.path.join(DOCS_DIR, "robots.txt")
+    if not os.path.exists(robots_path):
+        with open(robots_path, "w", encoding="utf-8") as f:
+            f.write(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n")
+
+    today = datetime.date.today().isoformat()
+    urls = [SITEMAP_URL_TMPL.format(loc=f"{SITE_URL}/", lastmod=today)]
+    for p in posts:
+        urls.append(SITEMAP_URL_TMPL.format(
+            loc=f"{SITE_URL}/posts/{p['slug']}.html", lastmod=today
+        ))
+    sitemap = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "".join(urls) +
+        "</urlset>\n"
+    )
+    with open(os.path.join(DOCS_DIR, "sitemap.xml"), "w", encoding="utf-8") as f:
+        f.write(sitemap)
 
 
 def main():
@@ -140,8 +206,19 @@ def main():
         image["bytes"], image.get("mimeType", "image/jpeg")
     )
 
+    posts = load_posts()
+
+    kind = random.choice(POST_TYPES)
+    print(f"Chosen post type: {kind}")
+
+    previous_summary = None
+    if kind == "saga":
+        last_saga = next((p for p in posts if p.get("type") == "saga"), None)
+        if last_saga:
+            previous_summary = last_saga.get("story_context", "")
+
     print("Writing blog post with Gemini...")
-    post = blog_gen.generate_blog_post(gemini_key)
+    post = blog_gen.generate_blog_post(gemini_key, kind, previous_summary)
     title = post["title"]
     body = post["body"]
     print(f"Title: {title}")
@@ -149,6 +226,8 @@ def main():
     slug = slugify(title) + "-" + uuid.uuid4().hex[:6]
     image_file = f"{slug}.jpg"
     date_str = datetime.date.today().strftime("%B %d, %Y")
+    type_label = TYPE_LABELS[kind]
+    image_alt = f"{title} — free {type_label.lower()} miniature STL for D&D and tabletop wargaming"
 
     os.makedirs(POSTS_DIR, exist_ok=True)
     os.makedirs(IMAGES_DIR, exist_ok=True)
@@ -161,45 +240,77 @@ def main():
         for name, url in STORE_LINKS
     )
 
+    excerpt = body.split("\n")[0].strip()
+    meta_desc = meta_description(excerpt)
+    canonical_url = f"{SITE_URL}/posts/{slug}.html"
+    image_url = f"{SITE_URL}/assets/images/{image_file}"
+
     post_html = POST_TEMPLATE.format(
         title=html.escape(title),
         site_title=SITE_TITLE,
+        type_label=type_label,
         date=date_str,
         image_file=image_file,
+        image_alt=html.escape(image_alt),
         body_html=render_body_html(body),
         links_html=links_html,
+        meta_desc=html.escape(meta_desc),
+        canonical_url=canonical_url,
+        image_url=image_url,
     )
     with open(os.path.join(POSTS_DIR, f"{slug}.html"), "w", encoding="utf-8") as f:
         f.write(post_html)
 
-    posts = load_posts()
-    excerpt = body.split("\n")[0].strip()
     if len(excerpt) > 140:
         excerpt = excerpt[:140].rsplit(" ", 1)[0] + "…"
-    posts.insert(0, {
+
+    entry = {
         "slug": slug,
         "title": title,
         "date": date_str,
         "image_file": image_file,
+        "image_alt": image_alt,
         "excerpt": excerpt,
-    })
+        "type": kind,
+        "type_label": type_label,
+    }
+    if kind == "saga":
+        # Keep the full body as context for the next chapter.
+        entry["story_context"] = body
+
+    posts.insert(0, entry)
     save_posts(posts)
 
     cards_html = "\n".join(
         CARD_TEMPLATE.format(
             slug=p["slug"],
             image_file=p["image_file"],
+            image_alt=html.escape(p.get("image_alt", p["title"])),
             title=html.escape(p["title"]),
             date=p["date"],
             excerpt=html.escape(p["excerpt"]),
+            type_label=p.get("type_label", "Chronicle"),
         )
         for p in posts
     )
-    index_html = INDEX_TEMPLATE.format(site_title=SITE_TITLE, cards_html=cards_html)
+    index_meta_desc = (
+        "Free D&D and tabletop wargaming miniature STLs — fantasy, sci-fi, "
+        "grimdark, and resin statues, updated daily with new stories, "
+        "painting tips, and lore."
+    )
+    index_html = INDEX_TEMPLATE.format(
+        site_title=SITE_TITLE,
+        tagline=SITE_TAGLINE,
+        cards_html=cards_html,
+        meta_desc=html.escape(index_meta_desc),
+        site_url=SITE_URL,
+    )
     with open(os.path.join(DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(index_html)
 
-    print(f"Published new post: {slug}")
+    write_seo_files(posts)
+
+    print(f"Published new post: {slug} ({kind})")
     print("Done.")
 
 
