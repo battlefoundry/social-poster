@@ -1,0 +1,149 @@
+:root {
+  --bg: #0f0f12;
+  --bg-card: #1a1a1f;
+  --text: #e8e6e3;
+  --text-dim: #9a978f;
+  --accent: #c0392b;
+  --border: #2a2a30;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Georgia', 'Times New Roman', serif;
+  line-height: 1.6;
+}
+
+.site-header {
+  padding: 2.5rem 1.5rem 1.5rem;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.site-title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.site-subtitle {
+  color: var(--text-dim);
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+.post-list {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.post-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.post-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+}
+
+.post-card img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  display: block;
+}
+
+.post-card-body {
+  padding: 1.1rem 1.2rem 1.4rem;
+}
+
+.post-card-body h2 {
+  margin: 0 0 0.3rem;
+  font-size: 1.15rem;
+}
+
+.post-date {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: 0 0 0.6rem;
+}
+
+.post-excerpt {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.post {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.post h1 {
+  font-size: 2rem;
+  margin-bottom: 0.3rem;
+}
+
+.post-image {
+  width: 100%;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+}
+
+.post-body p {
+  margin-bottom: 1.1rem;
+  font-size: 1.05rem;
+}
+
+.store-links {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.store-links h3 {
+  margin-bottom: 0.6rem;
+}
+
+.store-links ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.store-links li {
+  margin-bottom: 0.4rem;
+}
+
+.store-links a {
+  color: var(--accent);
+}
+
+.back-link {
+  display: inline-block;
+  margin-top: 2.5rem;
+  color: var(--text-dim);
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--text);
+}
