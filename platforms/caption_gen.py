@@ -11,6 +11,7 @@ GEMINI_URL = (
 
 LINKS_BLOCK = """Fantasy: https://cults3d.com/@BattleFoundry
 Scifi: https://cults3d.com/@BATTLEFOUNDRYSCIFI
+Grimdark: https://cults3d.com/@DREADWORKS
 Resin Statue: https://cults3d.com/@BlacksiteSyndicate"""
 
 PROMO_PROMPT = """You write short, punchy social media captions for a free \
