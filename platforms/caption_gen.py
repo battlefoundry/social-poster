@@ -4,6 +4,8 @@ caption list, so a Gemini outage never blocks a post."""
 import random
 import requests
 
+from platforms.brand_voice import VOICE, SEO_KEYWORDS
+
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     "gemini-flash-latest:generateContent"
@@ -14,22 +16,29 @@ Scifi: https://cults3d.com/@BATTLEFOUNDRYSCIFI
 Grimdark: https://cults3d.com/@DREADWORKS
 Resin Statue: https://cults3d.com/@BlacksiteSyndicate"""
 
-PROMO_PROMPT = """You write short, punchy social media captions for a free \
-tabletop-miniature STL store called BattleFoundry (fantasy + sci-fi minis) \
-and Blacksite Syndicate (resin statues), posting on Bluesky and Mastodon.
+PROMO_PROMPT = f"""You write social captions for BattleFoundry, a tabletop \
+miniature STL brand: fantasy + sci-fi + grimdark minis and resin statues, \
+all free to download.
 
-Write ONE new caption (2-3 sentences max, casual and enthusiastic, not \
-corporate-sounding) promoting that the miniatures are FREE to download. Do \
-NOT include any links or hashtags -- those get added separately. Do not \
-wrap your answer in quotation marks. Return only the caption text, nothing \
+{VOICE}
+
+{SEO_KEYWORDS}
+
+Write ONE new caption (2-3 sentences max) making clear the miniature \
+pictured is FREE to download right now. Do NOT include any links or \
+hashtags -- those get added separately. Do not wrap your answer in \
+quotation marks. Return only the caption text, nothing else."""
+
+ENGAGEMENT_PROMPT = f"""You run social for BattleFoundry, a tabletop \
+miniature STL brand posting on Bluesky and Mastodon.
+
+{VOICE}
+
+Write ONE short post (1-2 sentences) meant to spark replies from the D&D / \
+tabletop wargaming / 3D-printing community -- a sharp question, a hot-take \
+prompt, or a genuinely useful printing tip. Do NOT include any links. Do \
+not wrap your answer in quotation marks. Return only the text, nothing \
 else."""
-
-ENGAGEMENT_PROMPT = """You run social media for a tabletop-miniature / \
-3D-printing hobby store on Bluesky and Mastodon. Write ONE short, casual \
-post (1-2 sentences) meant to spark replies from the D&D / tabletop \
-wargaming / 3D-printing community -- a question, a hot-take prompt, or a \
-quick printing tip. Do NOT include any links. Do not wrap your answer in \
-quotation marks. Return only the text, nothing else."""
 
 HASHTAG_SETS = [
     "#dnd #ttrpg #tabletopwargame #3dprinting #stl #freeminiatures",
