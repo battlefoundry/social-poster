@@ -6,7 +6,7 @@ import requests
 
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.5-flash-lite:generateContent"
+    "gemini-flash-latest:generateContent"
 )
 
 LINKS_BLOCK = """Fantasy: https://cults3d.com/@BattleFoundry
