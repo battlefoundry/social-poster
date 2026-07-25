@@ -1,9 +1,11 @@
 """
 Generates one new blog post a day: picks a random image from the Google
 Drive folder, writes content with Gemini (rotating between an ongoing saga,
-standalone tutorials, and standalone lore), saves everything as a static
-HTML page under docs/, and updates the blog's homepage listing + SEO files
-(sitemap.xml, robots.txt, meta tags).
+standalone tutorials, and standalone lore), saves it as a static HTML page,
+and rebuilds three things every run:
+  - docs/index.html   the landing page (hero + featured + story teaser)
+  - docs/blog.html     the full post listing
+  - docs/sitemap.xml / robots.txt   SEO files
 
 GitHub Pages serves the docs/ folder directly -- see README for one-time
 setup (Settings -> Pages -> Deploy from branch -> main -> /docs).
@@ -38,7 +40,7 @@ STORE_LINKS = [
     ("Resin Statue", "https://cults3d.com/@BlacksiteSyndicate"),
 ]
 
-SITE_TITLE = "BattleFoundry Blog"
+SITE_TITLE = "BattleFoundry"
 SITE_TAGLINE = "Free D&D and tabletop wargaming miniature STLs"
 
 POST_TYPES = ["saga", "tutorial", "lore"]
@@ -97,9 +99,10 @@ POST_TEMPLATE = """<!DOCTYPE html>
 <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
-<header class="site-header">
-  <a href="../index.html" class="site-title">{site_title}</a>
-</header>
+<nav class="site-nav">
+  <a href="../index.html" class="logo"><img src="../assets/logo.png" alt="{site_title}"><span class="logo-text">{site_title}</span></a>
+  <div class="links"><a href="../blog.html">Chronicle</a></div>
+</nav>
 <main class="post">
   <span class="post-type">{type_label}</span>
   <h1>{title}</h1>
@@ -114,31 +117,30 @@ POST_TEMPLATE = """<!DOCTYPE html>
 {links_html}
     </ul>
   </div>
-  <a class="back-link" href="../index.html">&larr; BACK TO ALL POSTS</a>
+  <a class="back-link" href="../blog.html">&larr; BACK TO ALL POSTS</a>
 </main>
 </body>
 </html>
 """
 
-INDEX_TEMPLATE = """<!DOCTYPE html>
+BLOG_LIST_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{site_title} — {tagline}</title>
+<title>The Chronicle - {site_title}</title>
 <meta name="description" content="{meta_desc}">
-<link rel="canonical" href="{site_url}/">
-<meta property="og:type" content="website">
-<meta property="og:title" content="{site_title}">
-<meta property="og:description" content="{meta_desc}">
-<meta property="og:url" content="{site_url}/">
-<meta name="twitter:card" content="summary">
+<link rel="canonical" href="{site_url}/blog.html">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
+<nav class="site-nav">
+  <a href="index.html" class="logo"><img src="assets/logo.png" alt="{site_title}"><span class="logo-text">{site_title}</span></a>
+  <div class="links"><a href="blog.html">Chronicle</a></div>
+</nav>
 <header class="site-header">
-  <span class="site-title">{site_title}</span>
-  <p class="site-subtitle">{tagline}</p>
+  <span class="site-title">The Chronicle</span>
+  <p class="site-subtitle">Stories, tips, and lore from the forge</p>
 </header>
 <main class="post-list">
 {cards_html}
@@ -156,6 +158,88 @@ CARD_TEMPLATE = """  <a class="post-card" href="posts/{slug}.html">
       <p class="post-excerpt">{excerpt}</p>
     </div>
   </a>
+"""
+
+FEATURED_CARD_TEMPLATE = """    <a class="post-card" href="posts/{slug}.html">
+      <img src="assets/images/{image_file}" alt="{image_alt}">
+      <div class="post-card-body">
+        <span class="post-type">{type_label}</span>
+        <h2>{title}</h2>
+        <p class="post-excerpt">{excerpt}</p>
+      </div>
+    </a>
+"""
+
+LANDING_TEMPLATE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{site_title} — {tagline}</title>
+<meta name="description" content="{meta_desc}">
+<link rel="canonical" href="{site_url}/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{site_title} — {tagline}">
+<meta property="og:description" content="{meta_desc}">
+<meta property="og:image" content="{hero_image_url}">
+<meta property="og:url" content="{site_url}/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<nav class="site-nav">
+  <a href="index.html" class="logo"><img src="assets/logo.png" alt="{site_title}"><span class="logo-text">{site_title}</span></a>
+  <div class="links"><a href="blog.html">Chronicle</a></div>
+</nav>
+
+<section class="hero">
+  <div class="hero-copy">
+    <span class="mono-tag">FREE STL DROP — DAILY</span>
+    <h1>Arm your table.<br>For free.</h1>
+    <p>Fantasy, sci-fi, and grimdark miniatures for D&amp;D and tabletop wargaming. New free STLs, every single day.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://cults3d.com/@BattleFoundry">Browse the Vault</a>
+      <a class="btn btn-secondary" href="blog.html">Read the Chronicle</a>
+    </div>
+  </div>
+  <div class="hero-image-wrap">
+    <img src="assets/images/{hero_image_file}" alt="{hero_image_alt}">
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <span class="mono-tag">Latest Casts</span>
+    <h2>Fresh off the forge</h2>
+  </div>
+  <div class="featured-grid">
+{featured_html}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <span class="mono-tag">The Chronicle</span>
+    <h2>The story so far</h2>
+  </div>
+  <div class="story-teaser">
+    <img src="assets/images/{story_image_file}" alt="{story_image_alt}">
+    <div class="story-teaser-body">
+      <h3>{story_title}</h3>
+      <p>{story_excerpt}</p>
+      <a class="btn btn-secondary" href="posts/{story_slug}.html">Continue reading</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer-links">
+  <div class="store-list">
+{store_links_html}
+  </div>
+  <p class="fine-print">All miniatures free to download and print. New releases daily.</p>
+</footer>
+</body>
+</html>
 """
 
 SITEMAP_URL_TMPL = """  <url>
@@ -178,7 +262,10 @@ def write_seo_files(posts: list):
             f.write(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n")
 
     today = datetime.date.today().isoformat()
-    urls = [SITEMAP_URL_TMPL.format(loc=f"{SITE_URL}/", lastmod=today)]
+    urls = [
+        SITEMAP_URL_TMPL.format(loc=f"{SITE_URL}/", lastmod=today),
+        SITEMAP_URL_TMPL.format(loc=f"{SITE_URL}/blog.html", lastmod=today),
+    ]
     for p in posts:
         urls.append(SITEMAP_URL_TMPL.format(
             loc=f"{SITE_URL}/posts/{p['slug']}.html", lastmod=today
@@ -191,6 +278,82 @@ def write_seo_files(posts: list):
     )
     with open(os.path.join(DOCS_DIR, "sitemap.xml"), "w", encoding="utf-8") as f:
         f.write(sitemap)
+
+
+def build_blog_list(posts: list):
+    cards_html = "\n".join(
+        CARD_TEMPLATE.format(
+            slug=p["slug"],
+            image_file=p["image_file"],
+            image_alt=html.escape(p.get("image_alt", p["title"])),
+            title=html.escape(p["title"]),
+            date=p["date"],
+            excerpt=html.escape(p["excerpt"]),
+            type_label=p.get("type_label", "Chronicle"),
+        )
+        for p in posts
+    )
+    meta_desc = (
+        "Stories, painting tutorials, and lore from BattleFoundry — free "
+        "D&D and tabletop wargaming miniature STLs, updated daily."
+    )
+    blog_html = BLOG_LIST_TEMPLATE.format(
+        site_title=SITE_TITLE,
+        cards_html=cards_html or '  <p style="color:var(--ink-dim);">No posts yet.</p>',
+        meta_desc=html.escape(meta_desc),
+        site_url=SITE_URL,
+    )
+    with open(os.path.join(DOCS_DIR, "blog.html"), "w", encoding="utf-8") as f:
+        f.write(blog_html)
+
+
+def build_landing_page(posts: list):
+    if not posts:
+        return  # nothing to feature yet
+
+    hero_post = posts[0]
+    featured = posts[:3]
+    story_post = next((p for p in posts if p.get("type") == "saga"), posts[0])
+
+    featured_html = "\n".join(
+        FEATURED_CARD_TEMPLATE.format(
+            slug=p["slug"],
+            image_file=p["image_file"],
+            image_alt=html.escape(p.get("image_alt", p["title"])),
+            title=html.escape(p["title"]),
+            excerpt=html.escape(p["excerpt"]),
+            type_label=p.get("type_label", "Chronicle"),
+        )
+        for p in featured
+    )
+
+    store_links_html = "\n".join(
+        f'    <a href="{url}">{name}</a>' for name, url in STORE_LINKS
+    )
+
+    meta_desc = (
+        "Free D&D and tabletop wargaming miniature STLs — fantasy, sci-fi, "
+        "grimdark, and resin statues. New free miniatures forged daily."
+    )
+
+    landing_html = LANDING_TEMPLATE.format(
+        site_title=SITE_TITLE,
+        tagline=SITE_TAGLINE,
+        meta_desc=html.escape(meta_desc),
+        site_url=SITE_URL,
+        hero_image_file=hero_post["image_file"],
+        hero_image_alt=html.escape(hero_post.get("image_alt", hero_post["title"])),
+        hero_image_url=f"{SITE_URL}/assets/images/{hero_post['image_file']}",
+        featured_html=featured_html,
+        story_image_file=story_post["image_file"],
+        story_image_alt=html.escape(story_post.get("image_alt", story_post["title"])),
+        story_title=html.escape(story_post["title"]),
+        story_excerpt=html.escape(story_post["excerpt"]),
+        story_slug=story_post["slug"],
+        store_links_html=store_links_html,
+    )
+    with open(os.path.join(DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
+        f.write(landing_html)
 
 
 def main():
@@ -240,8 +403,8 @@ def main():
         for name, url in STORE_LINKS
     )
 
-    excerpt = body.split("\n")[0].strip()
-    meta_desc = meta_description(excerpt)
+    excerpt_full = body.split("\n")[0].strip()
+    meta_desc = meta_description(excerpt_full)
     canonical_url = f"{SITE_URL}/posts/{slug}.html"
     image_url = f"{SITE_URL}/assets/images/{image_file}"
 
@@ -261,6 +424,7 @@ def main():
     with open(os.path.join(POSTS_DIR, f"{slug}.html"), "w", encoding="utf-8") as f:
         f.write(post_html)
 
+    excerpt = excerpt_full
     if len(excerpt) > 140:
         excerpt = excerpt[:140].rsplit(" ", 1)[0] + "…"
 
@@ -281,33 +445,8 @@ def main():
     posts.insert(0, entry)
     save_posts(posts)
 
-    cards_html = "\n".join(
-        CARD_TEMPLATE.format(
-            slug=p["slug"],
-            image_file=p["image_file"],
-            image_alt=html.escape(p.get("image_alt", p["title"])),
-            title=html.escape(p["title"]),
-            date=p["date"],
-            excerpt=html.escape(p["excerpt"]),
-            type_label=p.get("type_label", "Chronicle"),
-        )
-        for p in posts
-    )
-    index_meta_desc = (
-        "Free D&D and tabletop wargaming miniature STLs — fantasy, sci-fi, "
-        "grimdark, and resin statues, updated daily with new stories, "
-        "painting tips, and lore."
-    )
-    index_html = INDEX_TEMPLATE.format(
-        site_title=SITE_TITLE,
-        tagline=SITE_TAGLINE,
-        cards_html=cards_html,
-        meta_desc=html.escape(index_meta_desc),
-        site_url=SITE_URL,
-    )
-    with open(os.path.join(DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
-        f.write(index_html)
-
+    build_blog_list(posts)
+    build_landing_page(posts)
     write_seo_files(posts)
 
     print(f"Published new post: {slug} ({kind})")
