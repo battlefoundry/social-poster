@@ -84,6 +84,7 @@ POST_TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="dz-Zek-RNWoTrZl_QB-0ewj0SuxY1V4u0t3tJrb2kAo" />
 <title>{title} - {site_title}</title>
 <meta name="description" content="{meta_desc}">
 <link rel="canonical" href="{canonical_url}">
@@ -128,6 +129,7 @@ BLOG_LIST_TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="dz-Zek-RNWoTrZl_QB-0ewj0SuxY1V4u0t3tJrb2kAo" />
 <title>The Chronicle - {site_title}</title>
 <meta name="description" content="{meta_desc}">
 <link rel="canonical" href="{site_url}/blog.html">
@@ -175,6 +177,7 @@ LANDING_TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="dz-Zek-RNWoTrZl_QB-0ewj0SuxY1V4u0t3tJrb2kAo" />
 <title>{site_title} — {tagline}</title>
 <meta name="description" content="{meta_desc}">
 <link rel="canonical" href="{site_url}/">
