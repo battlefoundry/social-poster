@@ -1,7 +1,9 @@
-"""Generates a fresh caption using Google's free Gemini API. Raises on any
-failure -- the caller is expected to catch that and fall back to a static
-caption list, so a Gemini outage never blocks a post."""
+"""Generates a fresh caption using Google's free Gemini API. Retries on
+transient server errors; raises after exhausting retries -- the caller is
+expected to catch that and fall back to a static caption list, so a Gemini
+outage never blocks a post."""
 import random
+import time
 import requests
 
 from platforms.brand_voice import VOICE, SEO_KEYWORDS
@@ -10,6 +12,9 @@ GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     "gemini-flash-latest:generateContent"
 )
+
+MAX_RETRIES = 3
+RETRY_DELAY_SECONDS = 8  # doubles each retry (8s, 16s, 32s)
 
 LINKS_BLOCK = """Fantasy: https://cults3d.com/@BattleFoundry
 Scifi: https://cults3d.com/@BATTLEFOUNDRYSCIFI
@@ -51,18 +56,37 @@ ENGAGEMENT_TAGS = "#dnd #ttrpg #tabletopwargame #3dprinting"
 
 
 def _call_gemini(api_key: str, prompt: str) -> str:
-    resp = requests.post(
-        GEMINI_URL,
-        params={"key": api_key},
-        json={"contents": [{"parts": [{"text": prompt}]}]},
-        timeout=20,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-    if not text:
-        raise RuntimeError("Gemini returned an empty caption")
-    return text
+    last_error = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            resp = requests.post(
+                GEMINI_URL,
+                params={"key": api_key},
+                json={"contents": [{"parts": [{"text": prompt}]}]},
+                timeout=20,
+            )
+            if resp.status_code in (500, 503, 429) and attempt < MAX_RETRIES:
+                delay = RETRY_DELAY_SECONDS * (2 ** (attempt - 1))
+                print(f"[Gemini] Got {resp.status_code}, retrying in {delay}s "
+                      f"(attempt {attempt}/{MAX_RETRIES})...")
+                time.sleep(delay)
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            if not text:
+                raise RuntimeError("Gemini returned an empty caption")
+            return text
+        except requests.exceptions.RequestException as e:
+            last_error = e
+            if attempt < MAX_RETRIES:
+                delay = RETRY_DELAY_SECONDS * (2 ** (attempt - 1))
+                print(f"[Gemini] Request failed ({e}), retrying in {delay}s "
+                      f"(attempt {attempt}/{MAX_RETRIES})...")
+                time.sleep(delay)
+    if last_error:
+        raise last_error
+    raise RuntimeError(f"Gemini failed after {MAX_RETRIES} attempts")
 
 
 def generate_caption(api_key: str, kind: str) -> str:
