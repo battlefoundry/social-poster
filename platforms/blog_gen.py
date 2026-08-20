@@ -4,6 +4,7 @@ Three rotating post types:
   - tutorial: standalone painting/printing tips
   - lore:     standalone worldbuilding, unconnected to the saga
 """
+import time
 import requests
 
 from platforms.brand_voice import VOICE, SEO_KEYWORDS
@@ -12,6 +13,9 @@ GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     "gemini-flash-latest:generateContent"
 )
+
+MAX_RETRIES = 3
+RETRY_DELAY_SECONDS = 8  # doubles each retry (8s, 16s, 32s)
 
 BRAND_CONTEXT = """BattleFoundry is a tabletop-miniature STL brand: fantasy \
 minis under BattleFoundry, sci-fi under BATTLEFOUNDRYSCIFI, grimdark under \
@@ -79,18 +83,40 @@ sourcebook, not a fantasy novel trying too hard.
 
 
 def _call_gemini(api_key: str, prompt: str) -> str:
-    resp = requests.post(
-        GEMINI_URL,
-        params={"key": api_key},
-        json={"contents": [{"parts": [{"text": prompt}]}]},
-        timeout=30,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-    if not text:
-        raise RuntimeError("Gemini returned an empty blog post")
-    return text
+    last_error = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            resp = requests.post(
+                GEMINI_URL,
+                params={"key": api_key},
+                json={"contents": [{"parts": [{"text": prompt}]}]},
+                timeout=30,
+            )
+            # Retry on server-side hiccups (503, 500, 429 rate limit); fail
+            # fast on client errors like a bad key (401/403) or bad request (400).
+            if resp.status_code in (500, 503, 429) and attempt < MAX_RETRIES:
+                delay = RETRY_DELAY_SECONDS * (2 ** (attempt - 1))
+                print(f"[Gemini] Got {resp.status_code}, retrying in {delay}s "
+                      f"(attempt {attempt}/{MAX_RETRIES})...")
+                time.sleep(delay)
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            if not text:
+                raise RuntimeError("Gemini returned an empty blog post")
+            return text
+        except requests.exceptions.RequestException as e:
+            last_error = e
+            if attempt < MAX_RETRIES:
+                delay = RETRY_DELAY_SECONDS * (2 ** (attempt - 1))
+                print(f"[Gemini] Request failed ({e}), retrying in {delay}s "
+                      f"(attempt {attempt}/{MAX_RETRIES})...")
+                time.sleep(delay)
+    # All retries exhausted.
+    if last_error:
+        raise last_error
+    raise RuntimeError(f"Gemini failed after {MAX_RETRIES} attempts")
 
 
 def _parse(raw: str, fallback_title: str = "New Free Miniature") -> dict:
